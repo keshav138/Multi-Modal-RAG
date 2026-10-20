@@ -3,7 +3,7 @@
 variable "region" {
   description = "AWS region everything is deployed into."
   type        = string
-  default     = "us-east-1"
+  default     = "ap-southeast-2"
 }
 
 variable "image_name" {

@@ -10,7 +10,7 @@ htmlcov/
 
 # ── Secrets / local config ────────────────────────────────────────────
 .env
-infra/k8s/secret.yaml.local
+infra/k8s/secret.yaml
 *.pem
 
 # ── Local data (large, machine-specific) ──────────────────────────────
@@ -26,6 +26,7 @@ uploads/
 *.tfvars
 tfplan
 crash.log
+.terraform.*
 
 # ── Local tooling ─────────────────────────────────────────────────────
 .commandcode/
