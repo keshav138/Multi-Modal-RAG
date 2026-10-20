@@ -4,10 +4,6 @@
 // GitHub webhooks can't reach a laptop behind NAT, so Jenkins checks the
 // repo every minute instead.
 //
-// The Jenkinsfile is intentionally thin: every stage that touches Windows /
-// Docker / SSH specifics lives in scripts/ci/*.cmd, so those scripts can be
-// run and debugged directly in a terminal, outside Jenkins.
-//
 // Flow: lint -> test -> build -> push to Docker Hub -> (main) SSH deploy -> health check.
 //
 // One-time Jenkins setup (Dashboard -> Manage Jenkins):
@@ -38,8 +34,6 @@ pipeline {
     }
 
     stages {
-        // Declarative pipelines auto-checkout when the job has SCM defined,
-        // so there's no explicit checkout here — just derive the build tag.
         stage('Set build tag') {
             steps {
                 script {
@@ -80,8 +74,6 @@ pipeline {
 
         stage('Deploy') {
             when {
-                // `when { branch 'main' }` is unreliable in simple pipeline
-                // jobs (no BRANCH_NAME), so check the env vars directly.
                 expression {
                     def branch = env.GIT_BRANCH ?: env.BRANCH_NAME ?: 'main'
                     return branch == 'main' || branch.endsWith('/main')
@@ -94,10 +86,28 @@ pipeline {
                         keyFileVariable: 'SSH_KEY',
                         usernameVariable: 'SSH_USER'
                     ),
-                    string(credentialsId: 'ec2-host', variable: 'EC2_HOST'),
+                    string(credentialsId: 'ec2-host',     variable: 'EC2_HOST'),
                     string(credentialsId: 'groq-api-key', variable: 'GROQ_KEY')
                 ]) {
-                    bat 'scripts\\ci\\deploy.cmd'
+                    // Jenkins writes the key with forward-slash paths and broad ACLs.
+                    // Convert the path to backslashes first, then strip BUILTIN\Users
+                    // so Windows OpenSSH accepts the key file.
+                    bat '''
+                        set KEY=%SSH_KEY:/=\\%
+                        icacls "%KEY%" /remove:g "BUILTIN\\Users"
+
+                        (
+                          echo DATABASE_URL=postgresql://rag:rag@db:5432/rag
+                          echo GROQ_API_KEY=%GROQ_KEY%
+                          echo DOCKERHUB_USER=%DOCKERHUB_USER%
+                          echo IMAGE_TAG=%BUILD_TAG%
+                        ) > .env.deploy
+
+                        scp -o StrictHostKeyChecking=no -i "%KEY%" .env.deploy "%SSH_USER%@%EC2_HOST%:%DEPLOY_DIR%/.env"
+                        scp -o StrictHostKeyChecking=no -i "%KEY%" infra/docker/docker-compose.yml "%SSH_USER%@%EC2_HOST%:%DEPLOY_DIR%/docker-compose.yml"
+                        ssh -o StrictHostKeyChecking=no -i "%KEY%" "%SSH_USER%@%EC2_HOST%" "cd %DEPLOY_DIR% && docker compose pull && docker compose up -d"
+                        del .env.deploy
+                    '''
                 }
             }
         }
@@ -118,7 +128,11 @@ pipeline {
                     ),
                     string(credentialsId: 'ec2-host', variable: 'EC2_HOST')
                 ]) {
-                    bat 'scripts\\ci\\verify.cmd'
+                    bat '''
+                        set KEY=%SSH_KEY:/=\\%
+                        icacls "%KEY%" /remove:g "BUILTIN\\Users"
+                        ssh -o StrictHostKeyChecking=no -i "%KEY%" "%SSH_USER%@%EC2_HOST%" "curl -fsS http://localhost:8000/health && curl -fsS http://localhost:8000/readiness"
+                    '''
                 }
             }
         }
