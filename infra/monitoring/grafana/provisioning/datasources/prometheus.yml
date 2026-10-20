@@ -1,0 +1,11 @@
+# Grafana datasource provisioning — points Grafana at the Prometheus
+# container in the compose network (no manual setup needed).
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true

@@ -1,0 +1,25 @@
+# Build context is the repo root — everything below is excluded from it.
+.git
+.gitignore
+.pytest_cache
+.venv
+venv
+**/__pycache__
+*.pyc
+*.log
+
+# Secrets must never reach the image
+.env
+
+# Large local data — mounted/baked at runtime instead
+data/manuals
+data/audio_data
+data/out_audio
+data/out_images
+data/out
+data/uploads
+
+# CI plumbing doesn't belong in the runtime image
+.github
+infra
+tests

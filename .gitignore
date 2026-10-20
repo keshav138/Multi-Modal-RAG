@@ -1,0 +1,33 @@
+# ── Python ────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ── Secrets / local config ────────────────────────────────────────────
+.env
+infra/k8s/secret.yaml.local
+*.pem
+
+# ── Local data (large, machine-specific) ──────────────────────────────
+# Manuals, audio, extracted images and uploads stay out of git.  If you
+# want to version a small dataset, force-add it or narrow this pattern.
+data/
+uploads/
+
+# ── Terraform / infra tooling ─────────────────────────────────────────
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+tfplan
+crash.log
+
+# ── Local tooling ─────────────────────────────────────────────────────
+.commandcode/
+.DS_Store
+Thumbs.db

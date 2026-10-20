@@ -1,0 +1,17 @@
+# Prometheus scrape configuration for the Multi Modal RAG stack.
+# The app exposes /metrics via prometheus-fastapi-instrumentator plus the
+# custom RAG metrics defined in app/core/metrics.py.
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: rag-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["app:8000"]
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

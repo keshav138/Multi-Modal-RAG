@@ -1,0 +1,107 @@
+[
+  {
+    "call_id": "call_01",
+    "ground_truth_manual": "Carrier 38CKM",
+    "topic": "Clearance Requirements",
+    "ground_truth_fact": "Minimum clearance above unit is 48 inches (1219.2 mm); service end clearance is 24 inches.",
+    "transcript": "Tech: Hey, I'm roughing in an outdoor condenser on a tight residential lot. Carrier 38CKM. What's the vertical clearance needed above this unit?\nSupport: For the 38CKM, you need a minimum of 48 inches of unobstructed clearance above the unit for proper airflow discharge.\nTech: Got it. And for the service access side?\nSupport: Allow at least 24 inches on the service end."
+  },
+  {
+    "call_id": "call_02",
+    "ground_truth_manual": "Carrier 38CKM",
+    "topic": "Refrigerant Line Add-on Charge",
+    "ground_truth_fact": "Factory charge covers up to 15 ft of lineset. Additional 3/8 inch liquid line requires 0.6 oz/ft.",
+    "transcript": "Tech: I'm running a lineset on a 38CKM that measures out to 45 feet total. How much extra R-22 or 410A do I weigh in?\nSupport: The factory charge covers up to 15 feet. For anything beyond that with a 3/8 liquid line, add 0.6 ounces per foot.\nTech: Okay, so 30 extra feet at 0.6 ounces gives me 18 ounces to add to the baseline."
+  },
+  {
+    "call_id": "call_03",
+    "ground_truth_manual": "Carrier 38CKM",
+    "topic": "Filter Drier Installation",
+    "ground_truth_fact": "Braze filter drier 5 inches from indoor coil with flow arrow pointing toward indoor coil.",
+    "transcript": "Tech: Installing the liquid line filter drier on the indoor side. Any specific orientation or spacing rules?\nSupport: Yes. Braze it exactly 5 inches from the indoor coil liquid tube. Make sure the flow arrow points directly toward the indoor coil.\nTech: 5 inches from the coil, arrow pointing inward. Understood."
+  },
+  {
+    "call_id": "call_04",
+    "ground_truth_manual": "Trane 4TWR4",
+    "topic": "Target Subcooling",
+    "ground_truth_fact": "4-ton 4TWR4 paired with TEM6A0C48 requires 14°F target subcooling.",
+    "transcript": "Tech: Checking charge on a Trane 4-ton 4TWR4 heat pump paired with a TEM6 air handler. My subcooling is sitting at 9 degrees.\nSupport: That's low. For that specific air handler matchup, target subcooling is 14 degrees Fahrenheit.\nTech: Alright, I'll throttle in liquid until I hit 14 degrees."
+  },
+  {
+    "call_id": "call_05",
+    "ground_truth_manual": "Trane 4TWR4",
+    "topic": "Crankcase Heater Verification",
+    "ground_truth_fact": "Crankcase heater must be energized 24 hours prior to starting the compressor.",
+    "transcript": "Tech: Just finished running high voltage on a new 4TWR4 install. Can I fire up the test cycle now?\nSupport: Negative. If the ambient is cold or the unit has been sitting, you must power the crankcase heater for a full 24 hours before starting the compressor.\nTech: Understood, I'll leave the disconnect in with the thermostat off until tomorrow."
+  },
+  {
+    "call_id": "call_06",
+    "ground_truth_manual": "Trane 4MXW",
+    "topic": "Under-Voltage Protection Threshold",
+    "ground_truth_fact": "Inverter drops out if AC voltage falls below 158V for 10 seconds; auto-restarts once voltage exceeds 255V.",
+    "transcript": "Tech: Mini-split inverter board is cutting out during peak load. What trips the under-voltage protection?\nSupport: If AC input voltage drops to 158 volts or lower for 10 consecutive seconds, the board locks out.\nTech: What's the threshold to reset?\nSupport: It requires line voltage to recover above 255 volts before resuming normal inverter operation."
+  },
+  {
+    "call_id": "call_07",
+    "ground_truth_manual": "Goodman GSX14",
+    "topic": "Low Pressure Switch Cut-out",
+    "ground_truth_fact": "Low pressure control opens at 20 PSI ± 5 PSI and closes at 45 PSI ± 5 PSI.",
+    "transcript": "Tech: Got a Goodman condenser short-cycling on the low-pressure control. What are the factory cut-in and cut-out setpoints?\nSupport: The switch opens at 20 PSI plus or minus 5 PSI to protect the scroll, and resets automatically when pressure rises back to 45 PSI.\nTech: I saw it dip right around 22 PSI, so the switch is functioning properly. I must have a restriction or leak."
+  },
+  {
+    "call_id": "call_08",
+    "ground_truth_manual": "Goodman GSX14",
+    "topic": "Torque Specs for Service Valves",
+    "ground_truth_fact": "Service valve stem caps require 8 to 12 ft-lbs; flare nuts require 14 to 18 ft-lbs.",
+    "transcript": "Tech: What's the torque spec on the brass service valve caps for the GSX condenser?\nSupport: Service valve stem caps should be torqued between 8 and 12 foot-pounds. Flare gauge port caps take 8 to 10 foot-pounds.\nTech: Thanks, just making sure I don't crush the brass or under-tighten and leak."
+  },
+  {
+    "call_id": "call_09",
+    "ground_truth_manual": "Carrier 58SB0",
+    "topic": "Gas Supply Pressure",
+    "ground_truth_fact": "Natural gas inlet pressure must be between 4.5 in. w.c. minimum and 13.6 in. w.c. maximum.",
+    "transcript": "Tech: Clocking the manifold on an 80% furnace. What is the allowable inlet supply pressure for natural gas?\nSupport: Minimum inlet gas pressure is 4.5 inches water column. Maximum static pressure must not exceed 13.6 inches water column.\nTech: I'm reading 6.8 inches w.c. inlet, so that's well within tolerance."
+  },
+  {
+    "call_id": "call_10",
+    "ground_truth_manual": "Carrier 58SB0",
+    "topic": "Blower Motor Speed Tap Selection",
+    "ground_truth_fact": "Cooling tap uses Black (High), Continuous Fan uses Red (Low), Heating uses Blue (Med-High).",
+    "transcript": "Tech: Wiring the PSC blower taps on a replacement control board. What's the factory wire assignment for speeds?\nSupport: Black wire is High for cooling, Blue is Medium-High for heating, and Red is Low for continuous fan.\nTech: Black to COOL, Blue to HEAT, Red to FAN. Done."
+  },
+  {
+    "call_id": "call_11",
+    "ground_truth_manual": "Trane XR14",
+    "topic": "Defrost Control Board Flash Codes",
+    "ground_truth_fact": "2 flashes on defrost control board indicates ambient temperature sensor fault.",
+    "transcript": "Tech: The outdoor board on this XR14 heat pump is flashing an amber LED two times repeatedly. What fault is that?\nSupport: A 2-flash code indicates an open or shorted outdoor ambient temperature sensor.\nTech: I'll pull the sensor leads and check resistance against the 10k thermistor chart."
+  },
+  {
+    "call_id": "call_12",
+    "ground_truth_manual": "Trane XR14",
+    "topic": "Defrost Termination Temperature",
+    "ground_truth_fact": "Defrost terminates automatically when the coil temperature reaches 47°F or after 14 minutes runtime.",
+    "transcript": "Tech: How long should this unit remain in defrost mode during a cycle?\nSupport: Defrost terminates when the liquid line coil sensor reaches 47 degrees Fahrenheit, or when the timer hits a hard maximum of 14 minutes.\nTech: Okay, if it stays in defrost longer than 14 minutes, the timer module is compromised."
+  },
+  {
+    "call_id": "call_13",
+    "ground_truth_manual": "Goodman GMVC96",
+    "topic": "Dip Switch CFMs",
+    "ground_truth_fact": "DIP switches 1 and 2 set cooling airflow; ON/ON selects 400 CFM/ton default.",
+    "transcript": "Tech: Commissioning a GMVC96 two-stage variable furnace. Need to set the cooling CFM for a 3-ton coil.\nSupport: Check bank S1. DIP switches 1 and 2 set your base CFM per ton. Setting both switch 1 and switch 2 to ON gives you 400 CFM per ton, which equals 1200 CFM total.\nTech: Setting 1 and 2 to ON. Perfect."
+  },
+  {
+    "call_id": "call_14",
+    "ground_truth_manual": "Goodman GMVC96",
+    "topic": "Error Code E0",
+    "ground_truth_fact": "Code E0 indicates internal memory fault or corrupted EEPROM on the main circuit board.",
+    "transcript": "Tech: The 7-segment display on the Goodman furnace is showing an alternating 'E' and '0'. What does that signify?\nSupport: Code E0 is an internal microprocessor or EEPROM memory error. It means the board can no longer read its operating configuration.\nTech: So no field reset? Straight board replacement?\nSupport: Correct. Cycle line power once to verify, but if E0 returns, replace the integrated control."
+  },
+  {
+    "call_id": "call_15",
+    "ground_truth_manual": "Carrier 24AAA5",
+    "topic": "Compressor Hard Start Kit",
+    "ground_truth_fact": "Start capacitor rated 135-155 uF at 330V; potential relay pick-up voltage 180-195V.",
+    "transcript": "Tech: Adding a factory hard start kit to a 24AAA5 condenser. Do you have the spec for the potential relay and cap?\nSupport: The approved start capacitor is 135 to 155 microfarads rated at 330 VAC. The potential relay pick-up voltage must fall between 180 and 195 volts.\nTech: Verified, the kit parts match those specs."
+  }
+]

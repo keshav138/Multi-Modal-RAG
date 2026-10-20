@@ -1,0 +1,14 @@
+# Grafana dashboard provisioning — loads every JSON file in the
+# dashboards directory at startup.
+
+apiVersion: 1
+
+providers:
+  - name: rag
+    orgId: 1
+    folder: RAG
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards
