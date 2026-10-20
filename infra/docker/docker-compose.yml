@@ -29,6 +29,10 @@ services:
       - "5432:5432"
 
   app:
+    # On the EC2 box Jenkins pushes to Docker Hub and `docker compose pull`
+    # fetches this image (DOCKERHUB_USER / IMAGE_TAG come from the box's .env).
+    # Locally the build: block below is used instead.
+    image: ${DOCKERHUB_USER:-your-dockerhub-user}/multimodal-rag:${IMAGE_TAG:-latest}
     build:
       context: ../..
       dockerfile: infra/docker/Dockerfile

@@ -19,15 +19,15 @@ Groq-served LLM synthesizes a cited answer.
 │   ├── image-extraction/     # PDF → cropped figures + captions
 │   └── audio-creation/       # synthetic calls (Piper TTS)
 ├── tests/                # pytest suite (no real ML models or DB needed)
-├── infra/                # docker/, k8s/, terraform/, monitoring/
-├── docs/                 # Plan.md, fastapi-plan.md, DEPLOYMENT.md
+├── infra/                # docker/, terraform/, monitoring/
+├── docs/                 # Plan.md, fastapi-plan.md, deployment guides
 ├── data/                 # all runtime data (gitignored-style, local only)
 │   ├── manuals/              # source PDFs
 │   ├── audio_data/           # synthetic call recordings
 │   ├── out_audio/            # TTS output
 │   ├── out_images/           # extracted figures (served via /static/images)
 │   └── uploads/              # multipart upload staging
-├── .github/workflows/    # CI/CD pipeline (lint → test → build → deploy)
+├── Jenkinsfile           # CI/CD pipeline (laptop Jenkins → Docker Hub → EC2)
 └── README.md
 ```
 
@@ -63,11 +63,15 @@ ruff check app tests pipelines scripts
 
 ## Deployment
 
-Step-by-step from zero (accounts, credentials, first deploy, CI loop):
+Step-by-step from zero (accounts, credentials, Terraform, Jenkins, CI loop):
 [docs/CLOUD_DEPLOYMENT_GUIDE.md](docs/CLOUD_DEPLOYMENT_GUIDE.md).
 Plain-language overview of how the pieces fit:
 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
-Quickstart with Docker:
+
+Architecture in one line: Terraform (state in HCP) provisions a single EC2
+box; Jenkins on your laptop polls GitHub, builds the image, pushes to Docker
+Hub, and SSH-deploys the compose stack onto the box. Quickstart with Docker
+locally:
 
 ```bash
 export GROQ_API_KEY=...

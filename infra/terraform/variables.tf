@@ -1,49 +1,36 @@
 # Input variables for the Multi Modal RAG Terraform root module.
 
 variable "region" {
-  description = "AWS region everything is deployed into."
+  description = "AWS region the instance is launched in."
   type        = string
   default     = "ap-southeast-2"
 }
 
-variable "image_name" {
-  description = "Name of the ECR repository for the app image."
+variable "instance_type" {
+  description = "EC2 instance type (m7i-flex.large = 8GB RAM, fits the ML stack)."
   type        = string
-  default     = "multimodal-rag"
+  default     = "m7i-flex.large"
 }
 
-variable "cluster_name" {
-  description = "Name of the EKS cluster."
+variable "key_name" {
+  description = "Name of the EC2 key pair (Terraform creates it)."
   type        = string
-  default     = "multimodal-rag"
+  default     = "mmrag-deploy"
 }
 
-variable "node_count" {
-  description = "Number of worker nodes in the EKS node group."
-  type        = number
-  default     = 2
+variable "ssh_public_key" {
+  description = "Public half of the SSH keypair. Generate locally with ssh-keygen and paste the contents of the .pub file."
+  type        = string
 }
 
-variable "node_type" {
-  description = "EC2 instance type for EKS workers."
+variable "ssh_cidr" {
+  description = "CIDR allowed to SSH into the box. Default is wide open for the demo — auth is key-only (no passwords), so this is acceptable short-term. Tighten to your own IP afterwards, e.g. 203.0.113.10/32."
   type        = string
-  default     = "t3.large"
+  default     = "0.0.0.0/0"
 }
 
-variable "db_name" {
-  description = "Name of the PostgreSQL database (schema)."
+variable "deploy_dir" {
+  description = "Directory on the instance where Jenkins places the compose file and .env."
   type        = string
-  default     = "rag"
-}
-
-variable "db_user" {
-  description = "Master username for PostgreSQL."
-  type        = string
-  default     = "rag"
-}
-
-variable "db_pass" {
-  description = "Master password for PostgreSQL (override via -var or tfvars)."
-  type        = string
-  sensitive   = true
+  default     = "/opt/mmrag"
 }

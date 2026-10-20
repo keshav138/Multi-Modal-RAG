@@ -1,86 +1,82 @@
 # Deployment — how it works
 
 This is a plain-language walkthrough of the deployment setup in `infra/`,
-`.github/workflows/deploy.yml`, and the FastAPI app itself. You don't need
-any of it to run the service locally — `uvicorn app.main:app` is enough for
-development.
+`Jenkinsfile`, and the FastAPI app itself. You don't need any of it to run
+the service locally — `uvicorn app.main:app` is enough for development.
 
 > **Looking for the step-by-step?** [CLOUD_DEPLOYMENT_GUIDE.md](CLOUD_DEPLOYMENT_GUIDE.md)
 > is the from-zero walkthrough: accounts, every credential and where to
-> insert it, first infra build, first deploy, and the CI loop.
+> insert it, provisioning the box, installing Jenkins, and the CI loop.
 
 ## The big picture
 
 ```
-GitHub ──push──▶ GitHub Actions ──build──▶ ECR (container registry)
-                       │                      │
-                       └───── terraform ─────▶ EKS (Kubernetes) ──pulls──▶ RDS (Postgres/pgvector)
-                                              │
-                                              └─▶ Prometheus/Grafana watch the app's /metrics
+GitHub ──poll(1min)──▶ Jenkins (your laptop)
+                         ├─ lint ─ test ─ docker build ─ push ─▶ Docker Hub
+                         └─ (main) SSH ─▶ EC2 box: compose pull && up -d
+                                                │
+                              one m7i-flex.large (8GB) runs:
+                              app + pgvector + Prometheus + Grafana
 ```
 
 Three layers, each doing one job:
 
-1. **Terraform** (`infra/terraform/`) creates the cloud *infrastructure*:
-   - **ECR** — a private Docker registry (where images are stored).
-   - **RDS** — a managed PostgreSQL 16 server. The app's ingestion code runs
-     `CREATE EXTENSION vector` itself, so pgvector works out of the box.
-   - **EKS** — a managed Kubernetes cluster with a small node group.
-   Terraform only creates these things; it doesn't know about the app.
-2. **Kubernetes** (`infra/k8s/`) describes *how the app runs*:
-   - `deployment.yaml` — one pod running the container, with CPU/memory
-     limits, liveness (`/health`) and readiness (`/readiness`) probes.
-   - `service.yaml` — a stable in-cluster address for the pod.
-   - `configmap.yaml` / `secret.yaml` — settings (model names, paths) and
-     secrets (database URL, Groq key) injected as environment variables.
-   - `hpa.yaml` — scales pods up when CPU exceeds 70%.
-3. **GitHub Actions** (`.github/workflows/deploy.yml`) is the *delivery
-   pipeline*. There is no CI server to run or patch — on every push GitHub
-   spins up a fresh runner VM and executes: lint → test → build the Docker
-   image → push it to ECR → (on `main`) `terraform apply` + `kubectl set
-   image` → hit `/health` to verify.
+1. **Terraform** (`infra/terraform/`) provisions the *machine* — one EC2
+   instance (m7i-flex.large, 30GB disk), its security group (open for the
+   demo: 22/8000/3000/9090, SSH key-only — re-lock via `ssh_cidr` after),
+   the SSH key pair, an elastic IP, and a cloud-init script that installs
+   Docker + compose. State and locking live in HCP Terraform. Terraform
+   never deploys code — it's a day-0 tool you run from your laptop, and
+   only again when the box itself needs changing.
+2. **Docker compose** (`infra/docker/docker-compose.yml`) describes *what
+   runs on the box*: the app, a pgvector container, Prometheus and Grafana.
+   The same file works on your laptop for local development.
+3. **Jenkins** (`Jenkinsfile`, running on your laptop) is the *delivery
+   pipeline*. It polls GitHub every minute (webhooks can't reach a laptop
+   behind NAT), runs lint → test → `docker build` → push to Docker Hub, and
+   on `main` SSHes into the box, drops the compose file + `.env`, runs
+   `docker compose pull && up -d`, and curls `/health`.
 
-## How a code change reaches production
+## How a code change reaches the box
 
-1. You push to GitHub. No webhook configuration — Actions triggers
-   automatically.
-2. The `lint-test` job installs the Python requirements, runs `ruff` and
-   `pytest`. Broken code never builds.
-3. The `build-push` job builds the image with `infra/docker/Dockerfile`
-   (torch, the app, the pipelines, no test code), logs Docker into ECR with
-   a fresh token, and pushes with the commit SHA as the tag. GitHub's
-   build cache makes the ~2GB torch layers incremental.
-4. On the `main` branch only, the `deploy` job runs `terraform apply`
-   (a no-op if nothing in the infra changed) and then points the Kubernetes
-   deployment at the new image tag. Kubernetes replaces the pod gradually
-   (rolling update), so there's no downtime.
-5. The job polls `kubectl rollout status`, then curls `/health` from a
-   throwaway pod inside the cluster. If that fails, the workflow run is red.
+1. You push to GitHub. Within a minute, Jenkins' poll sees the new commit.
+2. Jenkins runs `ruff` and `pytest` — broken code never builds.
+3. Jenkins builds the image with `infra/docker/Dockerfile` (torch, the app,
+   the pipelines, no test code) and pushes it to Docker Hub under the
+   commit SHA and `latest` tags.
+4. On `main` only, Jenkins SSHs into the box, writes `/opt/mmrag/.env`
+   (database URL, Groq key, Docker Hub user, image tag), scp's the compose
+   file, and runs `docker compose pull && up -d`. Compose replaces the app
+   container with the new image while the database container keeps running.
+5. Jenkins curls `/health` and `/readiness` on the box. If either fails,
+   the build is red.
 
 ## What you set up once, by hand
 
-- **Repo secrets** (Settings → Secrets and variables → Actions):
-  `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` (or an OIDC role instead —
-  see the workflow header), `DB_PASSWORD` for Terraform, and `TF_API_TOKEN`
-  for HCP Terraform.
-- **HCP Terraform for state.** The `cloud` block in
-  `infra/terraform/main.tf` points at your HCP organization + workspace
-  (execution mode: Local). State storage and locking are handled by HCP —
-  no S3 bucket or DynamoDB table. Create the workspace, fill in the org
-  name, and `terraform init` once locally to migrate any local state.
-- **`infra/k8s/secret.yaml`** — applied once by hand with the real
-  `DATABASE_URL` and `GROQ_API_KEY`. The workflow deliberately skips this
-  file so placeholder values can never overwrite real secrets.
+- **AWS IAM user keys** for Terraform (EC2 permissions) — `aws configure`.
+- **HCP Terraform workspace** (`keshav-org` / `multimodal-rag`, execution
+  mode Local) + `terraform login`. State storage and locking are handled by
+  HCP — no S3 bucket or DynamoDB table.
+- **An SSH keypair** — public half goes to Terraform, private half to
+  Jenkins.
+- **Docker Hub repo** `multimodal-rag` (public) + access token.
+- **Jenkins credentials**: `dockerhub`, `ec2-ssh-key`, `ec2-host`,
+  `groq-api-key`, plus the `DOCKERHUB_USER` global env var. The deploy stage
+  writes the box's `.env` from these — no secrets are ever committed.
 
 ## Why the pieces are shaped this way
 
-- **One worker per pod.** The ML models (BGE, SigLIP, cross-encoder) live in
-  process memory and take 30-60s to load. Multiple uvicorn workers in one
-  pod would each load their own copy, so the image defaults to 1 worker and
-  the HPA adds pods instead of threads.
-- **Readiness waits for the models.** `/readiness` only returns 200 after the
-  DB pool answers and the retrieval service exists, so Kubernetes doesn't
-  route traffic to a pod that's still downloading model weights.
+- **One box, no orchestrator.** A single m7i-flex.large (8GB) comfortably
+  runs the app (ML models are ~4GB in memory) plus Postgres and the
+  monitoring stack. EKS/RDS/ECS were dropped — the EKS control plane alone
+  costs ~$73/month, and one service doesn't need orchestration.
+- **One worker per container.** The ML models (BGE, SigLIP, cross-encoder)
+  live in process memory and take 30-60s to load. Multiple uvicorn workers
+  in one container would each load their own copy, so the image defaults to
+  1 worker.
+- **`/readiness` waits for the models.** It only returns 200 after the DB
+  pool answers and the retrieval service exists — that's what Jenkins'
+  Verify stage checks after deploy.
 - **BackgroundTasks, not a queue.** Ingestion uploads are processed in the
   same process after the HTTP response. That's fine for this volume; if
   ingestion ever needs retries or many concurrent jobs, swap the in-memory
@@ -91,6 +87,9 @@ Three layers, each doing one job:
   `rag_ingestion_chunks_total`). Prometheus scrapes it every 15s; Grafana
   renders the pre-provisioned RAG dashboard (latency p50/p95, request rate,
   ingestion throughput).
+- **Terraform = machine, Jenkins = app.** Terraform runs rarely (create the
+  box, change ports/size); Jenkins runs every commit (build, push, deploy).
+  The seam between them is one number: the elastic IP.
 
 ## Running the stack locally (no cloud)
 

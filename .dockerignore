@@ -20,6 +20,6 @@ data/out
 data/uploads
 
 # CI plumbing doesn't belong in the runtime image
-.github
+Jenkinsfile
 infra
 tests

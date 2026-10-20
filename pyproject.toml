@@ -1,6 +1,6 @@
 # Project configuration for the Multi Modal RAG service.
 # Kept intentionally small: ruff (lint) and pytest (tests) are what the
-# GitHub Actions workflow invokes.
+# Jenkins pipeline invokes.
 
 [tool.ruff]
 line-length = 100

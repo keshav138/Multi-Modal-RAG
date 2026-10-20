@@ -20,8 +20,8 @@
 | Phase | Status | Notes |
 |---|---|---|
 | A — FastAPI core | ✅ Done | Multipart-upload ingestion, BackgroundTasks, search/query endpoints, 15 passing tests |
-| B — Containerization & CI/CD | ✅ Done | Multi-stage Dockerfile, docker-compose (app + pgvector + Prometheus + Grafana), GitHub Actions workflow |
-| C — Kubernetes & Terraform | ✅ Done | K8s manifests (Deployment/Service/ConfigMap/Secret/HPA), Terraform modules (EKS/RDS/ECR) |
+| B — Containerization & CI/CD | ✅ Done | Multi-stage Dockerfile, docker-compose (app + pgvector + Prometheus + Grafana), Jenkins pipeline (laptop) pushing to Docker Hub |
+| C — Cloud deployment | ✅ Done | Simplified: single EC2 (m7i-flex.large) via Terraform with HCP state — EKS/RDS/ECR dropped |
 
 ---
 
@@ -71,27 +71,19 @@ multi-modal-rag/
 │   ├── docker/
 │   │   ├── Dockerfile           # Multi-stage: builder → slim runtime
 │   │   └── docker-compose.yml   # app + postgres/pgvector + prometheus + grafana
-│   ├── k8s/
-│   │   ├── deployment.yaml
-│   │   ├── service.yaml
-│   │   ├── configmap.yaml
-│   │   ├── secret.yaml
-│   │   └── hpa.yaml
 │   ├── terraform/
-│   │   ├── main.tf
+│   │   ├── main.tf              # single EC2 box (HCP state)
 │   │   ├── variables.tf
 │   │   ├── outputs.tf
-│   │   └── modules/
-│   │       ├── eks/
-│   │       ├── rds/
-│   │       └── ecr/
+│   │   └── files/
+│   │       └── setup.sh         # cloud-init: installs Docker + compose
 │   └── monitoring/
 │       ├── prometheus.yml
 │       └── grafana/
 │           └── dashboards/
 │               └── rag-dashboard.json
 │
-├── .github/workflows/deploy.yml # CI/CD pipeline definition
+├── Jenkinsfile                  # CI/CD pipeline (laptop Jenkins → Docker Hub → EC2)
 ├── requirements.txt
 ├── pyproject.toml
 ├── .env.example
@@ -236,16 +228,16 @@ Images stored in `image_chunks.image_path` need to be servable. We mount a `Stat
 | **B1** | Dockerfile (multi-stage) | `infra/docker/Dockerfile` |
 | **B2** | docker-compose (app + pgvector + monitoring) | `infra/docker/docker-compose.yml` |
 | **B3** | Prometheus metrics + Grafana dashboard | `core/metrics.py`, `infra/monitoring/` |
-| **B4** | GitHub Actions workflow (lint → test → build → push → deploy) | `.github/workflows/deploy.yml` |
-| **B5** | GitHub repo setup + repo secrets (AWS creds, DB password) | — |
+| **B4** | Jenkins pipeline (lint → test → build → push → SSH deploy) | `Jenkinsfile` |
+| **B5** | Jenkins on laptop (SCM polling, credentials, Docker Hub repo) | — |
 
-### Phase C — Kubernetes & Terraform
+### Phase C — Single-EC2 deployment
 
 | Step | What | Files |
 |------|------|-------|
-| **C1** | K8s manifests (Deployment, Service, ConfigMap, Secret, HPA) | `infra/k8s/` |
-| **C2** | Terraform modules (EKS/GKE cluster, RDS/CloudSQL for pgvector, ECR/GAR) | `infra/terraform/` |
-| **C3** | CI deploy job → `kubectl apply` + `kubectl set image` | `.github/workflows/deploy.yml` update |
+| **C1** | Terraform provisions one EC2 box (m7i-flex.large) + SG + key pair + EIP, cloud-init installs Docker | `infra/terraform/` |
+| **C2** | Compose stack on the box (app + pgvector + Prometheus + Grafana) | `infra/docker/docker-compose.yml` |
+| **C3** | Jenkins deploy stage → SSH → `compose pull && up -d` → health check | `Jenkinsfile` |
 
 ---
 
@@ -253,29 +245,28 @@ Images stored in `image_chunks.image_path` need to be servable. We mount a `Stat
 
 ```mermaid
 flowchart LR
-    A["GitHub Push"] --> B["GitHub Actions"]
-    B --> C["Lint & Type Check"]
+    A["GitHub Push"] --> B["Jenkins (laptop) SCM poll"]
+    B --> C["Lint"]
     C --> D["Unit Tests"]
     D --> E["Build Docker Image"]
-    E --> F["Push to Registry"]
+    E --> F["Push to Docker Hub"]
     F --> G{"Branch?"}
-    G -->|main| H["Terraform Apply"]
-    G -->|dev| I["Deploy to Staging"]
-    H --> J["kubectl apply"]
-    I --> J
-    J --> K["Smoke Tests"]
-    K --> L["Prometheus Health Check"]
+    G -->|main| H["SSH to EC2"]
+    H --> I["compose pull + up -d"]
+    I --> J["Health Check"]
 ```
 
-### Workflow Stages (`.github/workflows/deploy.yml`)
+### Pipeline Stages (`Jenkinsfile`)
 
-1. **Checkout** — `actions/checkout`
+1. **Checkout** — Git SCM, `pollSCM('* * * * *')` (no webhook; laptop is behind NAT)
 2. **Lint** — `ruff check app tests pipelines scripts`
 3. **Test** — `pytest tests/ -v --cov=app`
-4. **Build** — `docker/build-push-action` (GitHub cache makes torch layers incremental)
-5. **Push** — same action, logged into ECR with a fresh token
-6. **Deploy** — `terraform apply` (infra) → `kubectl set image` (app)
-7. **Verify** — `kubectl rollout status`, then curl `/health` from an in-cluster pod
+4. **Build** — `docker build -f infra/docker/Dockerfile`
+5. **Push** — `docker login` with the `dockerhub` credential, push SHA + `latest` tags
+6. **Deploy** (main only) — SSH with `ec2-ssh-key`: scp compose file + generated `.env`, `docker compose pull && up -d`
+7. **Verify** — SSH `curl /health` + `/readiness` on the box
+
+Terraform runs separately, from the laptop — it owns the machine, Jenkins owns the app.
 
 ---
 
