@@ -36,9 +36,11 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
+        // Declarative pipelines auto-checkout when the job has SCM defined
+        // (see the "Declarative: Checkout SCM" step), so there's no explicit
+        // checkout here — just derive the build tag from the commit SHA.
+        stage('Set build tag') {
             steps {
-                checkout scm
                 script {
                     env.BUILD_TAG = env.GIT_COMMIT ?: 'latest'
                 }

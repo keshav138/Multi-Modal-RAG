@@ -11,3 +11,6 @@ select = ["E", "F", "W", "I"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Make `app` and `pipelines` importable regardless of how pytest is invoked
+# (bare `pytest` in Jenkins vs `python -m pytest` locally).
+pythonpath = ["."]
