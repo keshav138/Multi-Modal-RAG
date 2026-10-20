@@ -89,24 +89,32 @@ pipeline {
                     string(credentialsId: 'ec2-host',     variable: 'EC2_HOST'),
                     string(credentialsId: 'groq-api-key', variable: 'GROQ_KEY')
                 ]) {
-                    // Jenkins writes the key with forward-slash paths and broad ACLs.
-                    // Convert the path to backslashes first, then strip BUILTIN\Users
-                    // so Windows OpenSSH accepts the key file.
-                    bat '''
-                        set KEY=%SSH_KEY:/=\\%
-                        icacls "%KEY%" /remove:g "BUILTIN\\Users"
+                    // PowerShell lets us properly break ACL inheritance on the temp key
+                    // file that Jenkins writes with over-broad BUILTIN\Users permissions.
+                    // SetAccessRuleProtection($true, $false) disables inheritance AND
+                    // discards inherited entries, leaving only the rule we set explicitly.
+                    powershell '''
+                        $key = $env:SSH_KEY.Replace("/", "\\")
 
-                        (
-                          echo DATABASE_URL=postgresql://rag:rag@db:5432/rag
-                          echo GROQ_API_KEY=%GROQ_KEY%
-                          echo DOCKERHUB_USER=%DOCKERHUB_USER%
-                          echo IMAGE_TAG=%BUILD_TAG%
-                        ) > .env.deploy
+                        $acl = Get-Acl $key
+                        $acl.SetAccessRuleProtection($true, $false)
+                        $rule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+                            [Security.Principal.WindowsIdentity]::GetCurrent().Name,
+                            "FullControl", "Allow"
+                        )
+                        $acl.SetAccessRule($rule)
+                        Set-Acl -Path $key -AclObject $acl
 
-                        scp -o StrictHostKeyChecking=no -i "%KEY%" .env.deploy "%SSH_USER%@%EC2_HOST%:%DEPLOY_DIR%/.env"
-                        scp -o StrictHostKeyChecking=no -i "%KEY%" infra/docker/docker-compose.yml "%SSH_USER%@%EC2_HOST%:%DEPLOY_DIR%/docker-compose.yml"
-                        ssh -o StrictHostKeyChecking=no -i "%KEY%" "%SSH_USER%@%EC2_HOST%" "cd %DEPLOY_DIR% && docker compose pull && docker compose up -d"
-                        del .env.deploy
+                        $lines  = "DATABASE_URL=postgresql://rag:rag@db:5432/rag",
+                                  "GROQ_API_KEY=$($env:GROQ_KEY)",
+                                  "DOCKERHUB_USER=$($env:DOCKERHUB_USER)",
+                                  "IMAGE_TAG=$($env:BUILD_TAG)"
+                        $lines | Set-Content .env.deploy
+
+                        scp -o StrictHostKeyChecking=no -i $key .env.deploy "$($env:SSH_USER)@$($env:EC2_HOST):$($env:DEPLOY_DIR)/.env"
+                        scp -o StrictHostKeyChecking=no -i $key infra/docker/docker-compose.yml "$($env:SSH_USER)@$($env:EC2_HOST):$($env:DEPLOY_DIR)/docker-compose.yml"
+                        ssh -o StrictHostKeyChecking=no -i $key "$($env:SSH_USER)@$($env:EC2_HOST)" "cd $($env:DEPLOY_DIR) && docker compose pull && docker compose up -d"
+                        Remove-Item .env.deploy -ErrorAction SilentlyContinue
                     '''
                 }
             }
@@ -128,10 +136,19 @@ pipeline {
                     ),
                     string(credentialsId: 'ec2-host', variable: 'EC2_HOST')
                 ]) {
-                    bat '''
-                        set KEY=%SSH_KEY:/=\\%
-                        icacls "%KEY%" /remove:g "BUILTIN\\Users"
-                        ssh -o StrictHostKeyChecking=no -i "%KEY%" "%SSH_USER%@%EC2_HOST%" "curl -fsS http://localhost:8000/health && curl -fsS http://localhost:8000/readiness"
+                    powershell '''
+                        $key = $env:SSH_KEY.Replace("/", "\\")
+
+                        $acl = Get-Acl $key
+                        $acl.SetAccessRuleProtection($true, $false)
+                        $rule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+                            [Security.Principal.WindowsIdentity]::GetCurrent().Name,
+                            "FullControl", "Allow"
+                        )
+                        $acl.SetAccessRule($rule)
+                        Set-Acl -Path $key -AclObject $acl
+
+                        ssh -o StrictHostKeyChecking=no -i $key "$($env:SSH_USER)@$($env:EC2_HOST)" "curl -fsS http://localhost:8000/health && curl -fsS http://localhost:8000/readiness"
                     '''
                 }
             }
