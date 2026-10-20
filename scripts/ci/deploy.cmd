@@ -5,6 +5,11 @@ rem DEPLOY_DIR from the environment.
 setlocal
 cd /d "%~dp0..\.."
 
+rem Jenkins writes the SSH key to a temp file that inherits broad ACLs from
+rem the workspace, which Windows OpenSSH rejects ("bad permissions").
+rem Strip the BUILTIN\Users entry so only the owner retains access.
+icacls "%SSH_KEY%" /remove:g "BUILTIN\Users" >nul 2>&1
+
 rem Build the box's .env locally, scp it with the compose file, then tell
 rem the box to pull the fresh image and restart the stack.
 (
