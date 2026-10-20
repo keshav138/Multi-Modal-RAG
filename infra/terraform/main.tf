@@ -26,7 +26,7 @@ terraform {
   # first, then fill both names below.  Authentication uses the
   # TF_API_TOKEN / TF_TOKEN_app_terraform_io environment variable.
   cloud {
-    organization = "CHANGE_ME_ORGANIZATION" # your HCP Terraform organization
+    organization = "keshav-org" # your HCP Terraform organization
     workspaces {
       name = "multimodal-rag"                # the workspace holding this state
     }
