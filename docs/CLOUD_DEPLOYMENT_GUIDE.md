@@ -42,7 +42,7 @@ at the repo root already excludes them.
 4. **Groq** — console.groq.com.
 5. **GitHub** — this code will live in a repo (public or private, your call).
 6. **Laptop tools**: AWS CLI, Terraform (≥1.5), Docker Desktop, Git for
-   Windows (Git Bash), Python 3.11 (already installed for this project).
+   Windows, Python 3.11 (already installed for this project).
 
 ---
 
@@ -148,8 +148,9 @@ ssh -i ~/.ssh/mmrag-deploy ubuntu@<public_ip> "docker --version"
    (`pollSCM('* * * * *')`) — Jenkins checks GitHub every minute. No webhook
    needed (a laptop behind NAT can't receive them anyway).
 
-Laptop prerequisites so the stages run: Docker Desktop running, Git Bash on
-PATH, `ruff`/`pytest` installed (`pip install -r requirements.txt`).
+Laptop prerequisites so the stages run: Docker Desktop running, Git on PATH,
+`ruff`/`pytest` installed (`pip install -r requirements.txt`).  The deploy
+stages use Windows' built-in OpenSSH — no Git Bash needed.
 
 ---
 
@@ -185,6 +186,7 @@ or the deploy directory.
 | `terraform apply` fails to reach HCP | `terraform login` not run, or token expired (#2) |
 | `terraform apply` SSH key error | `ssh_public_key` mangled — pass via `-var` exactly as in Phase 4 (#3) |
 | Jenkins: `docker` not found in Build stage | Docker Desktop not running, or Jenkins can't see `docker.exe` (restart Jenkins after installing Docker) |
+| Build: `unable to resolve docker endpoint: context "desktop-linux"` | Docker Desktop was still starting when the build ran. Wait for the tray icon to show running, rebuild — the pipeline now polls `docker info` for up to 60s |
 | Push stage: `denied: requested access to the resource is denied` | `dockerhub` token expired or repo name mismatch (#4) |
 | Push stage: `unauthorized: incorrect username or password` but the token is right | Windows pipe appends `\r\n` to `--password-stdin`. Use `<nul set /p="TOKEN" \| docker login ...` (no trailing newline) or log in interactively once |
 | Deploy: `Permission denied (publickey)` | `ec2-ssh-key` holds the wrong private key, or `ec2-host` IP wrong (#6) |

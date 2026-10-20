@@ -228,7 +228,7 @@ Images stored in `image_chunks.image_path` need to be servable. We mount a `Stat
 | **B1** | Dockerfile (multi-stage) | `infra/docker/Dockerfile` |
 | **B2** | docker-compose (app + pgvector + monitoring) | `infra/docker/docker-compose.yml` |
 | **B3** | Prometheus metrics + Grafana dashboard | `core/metrics.py`, `infra/monitoring/` |
-| **B4** | Jenkins pipeline (lint → test → build → push → SSH deploy) | `Jenkinsfile` |
+| **B4** | Jenkins pipeline — thin wrapper; platform logic lives in `scripts/ci/*.cmd` | `Jenkinsfile`, `scripts/ci/` |
 | **B5** | Jenkins on laptop (SCM polling, credentials, Docker Hub repo) | — |
 
 ### Phase C — Single-EC2 deployment
