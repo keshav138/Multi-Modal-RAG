@@ -84,7 +84,14 @@ pipeline {
         }
 
         stage('Deploy') {
-            when { branch 'main' }
+            when {
+                // `when { branch 'main' }` is unreliable in simple pipeline
+                // jobs (no BRANCH_NAME), so check the env vars directly.
+                expression {
+                    def branch = env.GIT_BRANCH ?: env.BRANCH_NAME ?: 'main'
+                    return branch == 'main' || branch.endsWith('/main')
+                }
+            }
             steps {
                 withCredentials([
                     sshUserPrivateKey(
@@ -117,7 +124,12 @@ pipeline {
         }
 
         stage('Verify') {
-            when { branch 'main' }
+            when {
+                expression {
+                    def branch = env.GIT_BRANCH ?: env.BRANCH_NAME ?: 'main'
+                    return branch == 'main' || branch.endsWith('/main')
+                }
+            }
             steps {
                 withCredentials([
                     sshUserPrivateKey(
