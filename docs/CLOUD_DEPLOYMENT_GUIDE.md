@@ -186,6 +186,7 @@ or the deploy directory.
 | `terraform apply` SSH key error | `ssh_public_key` mangled — pass via `-var` exactly as in Phase 4 (#3) |
 | Jenkins: `docker` not found in Build stage | Docker Desktop not running, or Jenkins can't see `docker.exe` (restart Jenkins after installing Docker) |
 | Push stage: `denied: requested access to the resource is denied` | `dockerhub` token expired or repo name mismatch (#4) |
+| Push stage: `unauthorized: incorrect username or password` but the token is right | Windows pipe appends `\r\n` to `--password-stdin`. Use `<nul set /p="TOKEN" \| docker login ...` (no trailing newline) or log in interactively once |
 | Deploy: `Permission denied (publickey)` | `ec2-ssh-key` holds the wrong private key, or `ec2-host` IP wrong (#6) |
 | Deploy: box `compose pull` denied | Docker Hub repo is private — make it public or add a login step on the box |
 | Verify: connection refused on /health | app still starting (models download 2-5 min first run); watch with `ssh ubuntu@<ip> "cd /opt/mmrag && docker compose logs -f app"` |

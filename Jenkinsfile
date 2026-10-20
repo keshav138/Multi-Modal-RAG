@@ -72,7 +72,10 @@ pipeline {
                     usernameVariable: 'DH_USER',
                     passwordVariable: 'DH_TOKEN'
                 )]) {
-                    bat 'echo %DH_TOKEN% | docker login -u %DH_USER% --password-stdin'
+                    // `<nul set /p=` echoes WITHOUT a trailing CRLF — plain
+                    // `echo x |` would append \r\n and Docker sends the token
+                    // with a stray \r, failing auth on Windows.
+                    bat '<nul set /p="%DH_TOKEN%" | docker login -u %DH_USER% --password-stdin'
                     bat 'docker tag %FULL_IMAGE%:%BUILD_TAG% %FULL_IMAGE%:latest'
                     bat 'docker push %FULL_IMAGE%:%BUILD_TAG%'
                     bat 'docker push %FULL_IMAGE%:latest'
