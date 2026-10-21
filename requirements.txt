@@ -18,3 +18,5 @@ httpx
 pytest
 pytest-cov
 ruff
+sentencepiece
+protobuf
