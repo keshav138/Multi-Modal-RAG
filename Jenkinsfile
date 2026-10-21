@@ -94,6 +94,8 @@ pipeline {
                     // SetAccessRuleProtection($true, $false) disables inheritance AND
                     // discards inherited entries, leaving only the rule we set explicitly.
                     powershell '''
+                        # docker/ssh write progress to stderr; don't let PowerShell treat that as a failure
+                        $ErrorActionPreference = 'Continue'
                         $key = $env:SSH_KEY.Replace("/", "\\")
 
                         # 1. Fix ACL: break inheritance and restrict to current user only
@@ -122,10 +124,15 @@ pipeline {
                         $lines | Set-Content .env.deploy
 
                         scp -o StrictHostKeyChecking=no -i $key .env.deploy "$($env:SSH_USER)@$($env:EC2_HOST):$($env:DEPLOY_DIR)/.env"
+                        if ($LASTEXITCODE -ne 0) { throw "Remote command failed (exit $LASTEXITCODE)" }
                         scp -o StrictHostKeyChecking=no -i $key infra/docker/docker-compose.yml "$($env:SSH_USER)@$($env:EC2_HOST):$($env:DEPLOY_DIR)/docker-compose.yml"
+                        if ($LASTEXITCODE -ne 0) { throw "Remote command failed (exit $LASTEXITCODE)" }
                         scp -r -o StrictHostKeyChecking=no -i $key infra/monitoring "$($env:SSH_USER)@$($env:EC2_HOST):/tmp/"
+                        if ($LASTEXITCODE -ne 0) { throw "Remote command failed (exit $LASTEXITCODE)" }
                         ssh -o StrictHostKeyChecking=no -i $key "$($env:SSH_USER)@$($env:EC2_HOST)" "sudo mkdir -p $($env:DEPLOY_DIR)/../monitoring && sudo rm -rf $($env:DEPLOY_DIR)/../monitoring/prometheus.yml $($env:DEPLOY_DIR)/../monitoring/grafana && sudo cp -r /tmp/monitoring/. $($env:DEPLOY_DIR)/../monitoring/ && rm -rf /tmp/monitoring"
+                        if ($LASTEXITCODE -ne 0) { throw "Remote command failed (exit $LASTEXITCODE)" }
                         ssh -o StrictHostKeyChecking=no -i $key "$($env:SSH_USER)@$($env:EC2_HOST)" "cd $($env:DEPLOY_DIR) && docker compose pull && docker compose up -d"
+                        if ($LASTEXITCODE -ne 0) { throw "Remote command failed (exit $LASTEXITCODE)" }
                         Remove-Item .env.deploy -ErrorAction SilentlyContinue
                     '''
                 }
@@ -149,6 +156,8 @@ pipeline {
                     string(credentialsId: 'ec2-host', variable: 'EC2_HOST')
                 ]) {
                     powershell '''
+                        # docker/ssh write progress to stderr; don't let PowerShell treat that as a failure
+                        $ErrorActionPreference = 'Continue'
                         $key = $env:SSH_KEY.Replace("/", "\\")
 
                         # 1. Fix ACL: break inheritance and restrict to current user only
@@ -171,6 +180,7 @@ pipeline {
                         if ($LASTEXITCODE -ne 0) { throw "ec2-ssh-key credential is not a valid private key" }
 
                         ssh -o StrictHostKeyChecking=no -i $key "$($env:SSH_USER)@$($env:EC2_HOST)" "curl -fsS http://localhost:8000/health && curl -fsS http://localhost:8000/readiness"
+                        if ($LASTEXITCODE -ne 0) { throw "Remote command failed (exit $LASTEXITCODE)" }
                     '''
                 }
             }
