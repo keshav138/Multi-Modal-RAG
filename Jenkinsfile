@@ -106,10 +106,14 @@ pipeline {
                         $acl.SetAccessRule($rule)
                         Set-Acl -Path $key -AclObject $acl
 
-                        # 2. Fix line endings: Jenkins on Windows writes CRLF; OpenSSH needs LF
-                        $bytes = [System.IO.File]::ReadAllBytes($key)
-                        $text  = [System.Text.Encoding]::UTF8.GetString($bytes) -replace "`r`n", "`n"
-                        [System.IO.File]::WriteAllBytes($key, [System.Text.Encoding]::UTF8.GetBytes($text))
+                        # 2. Normalize key: LF endings, guaranteed trailing newline, no BOM
+                        $text = [System.IO.File]::ReadAllText($key) -replace "`r`n", "`n"
+                        $text = $text.TrimEnd() + "`n"
+                        [System.IO.File]::WriteAllText($key, $text, (New-Object System.Text.UTF8Encoding($false)))
+
+                        # 3. Fail fast with a clear message if the key is still unreadable
+                        ssh-keygen -y -f $key | Out-Null
+                        if ($LASTEXITCODE -ne 0) { throw "ec2-ssh-key credential is not a valid private key" }
 
                         $lines  = "DATABASE_URL=postgresql://rag:rag@db:5432/rag",
                                   "GROQ_API_KEY=$($env:GROQ_KEY)",
@@ -155,10 +159,14 @@ pipeline {
                         $acl.SetAccessRule($rule)
                         Set-Acl -Path $key -AclObject $acl
 
-                        # 2. Fix line endings: Jenkins on Windows writes CRLF; OpenSSH needs LF
-                        $bytes = [System.IO.File]::ReadAllBytes($key)
-                        $text  = [System.Text.Encoding]::UTF8.GetString($bytes) -replace "`r`n", "`n"
-                        [System.IO.File]::WriteAllBytes($key, [System.Text.Encoding]::UTF8.GetBytes($text))
+                        # 2. Normalize key: LF endings, guaranteed trailing newline, no BOM
+                        $text = [System.IO.File]::ReadAllText($key) -replace "`r`n", "`n"
+                        $text = $text.TrimEnd() + "`n"
+                        [System.IO.File]::WriteAllText($key, $text, (New-Object System.Text.UTF8Encoding($false)))
+
+                        # 3. Fail fast with a clear message if the key is still unreadable
+                        ssh-keygen -y -f $key | Out-Null
+                        if ($LASTEXITCODE -ne 0) { throw "ec2-ssh-key credential is not a valid private key" }
 
                         ssh -o StrictHostKeyChecking=no -i $key "$($env:SSH_USER)@$($env:EC2_HOST)" "curl -fsS http://localhost:8000/health && curl -fsS http://localhost:8000/readiness"
                     '''
