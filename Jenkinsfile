@@ -123,6 +123,8 @@ pipeline {
 
                         scp -o StrictHostKeyChecking=no -i $key .env.deploy "$($env:SSH_USER)@$($env:EC2_HOST):$($env:DEPLOY_DIR)/.env"
                         scp -o StrictHostKeyChecking=no -i $key infra/docker/docker-compose.yml "$($env:SSH_USER)@$($env:EC2_HOST):$($env:DEPLOY_DIR)/docker-compose.yml"
+                        scp -r -o StrictHostKeyChecking=no -i $key infra/monitoring "$($env:SSH_USER)@$($env:EC2_HOST):/tmp/"
+                        ssh -o StrictHostKeyChecking=no -i $key "$($env:SSH_USER)@$($env:EC2_HOST)" "sudo mkdir -p $($env:DEPLOY_DIR)/../monitoring && sudo rm -rf $($env:DEPLOY_DIR)/../monitoring/prometheus.yml $($env:DEPLOY_DIR)/../monitoring/grafana && sudo cp -r /tmp/monitoring/. $($env:DEPLOY_DIR)/../monitoring/ && rm -rf /tmp/monitoring"
                         ssh -o StrictHostKeyChecking=no -i $key "$($env:SSH_USER)@$($env:EC2_HOST)" "cd $($env:DEPLOY_DIR) && docker compose pull && docker compose up -d"
                         Remove-Item .env.deploy -ErrorAction SilentlyContinue
                     '''
