@@ -7,8 +7,22 @@ is synchronous.  FastAPI automatically runs sync route handlers in a
 threadpool, so we still get concurrency without mixing sync/async DB calls.
 """
 
+import psycopg
 from pgvector.psycopg import register_vector
 from psycopg_pool import ConnectionPool
+
+
+def ensure_vector_extension(dsn: str) -> None:
+    """
+    Enable the pgvector extension on a fresh database.
+
+    register_vector() fails with "vector type not found" if the extension
+    doesn't exist yet, so this must run on a plain connection *before* the
+    pool is created.  It is idempotent and needs a role allowed to create
+    extensions (the POSTGRES_USER of the pgvector image is a superuser).
+    """
+    with psycopg.connect(dsn, autocommit=True) as conn:
+        conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
 
 
 def create_pool(dsn: str) -> ConnectionPool:
@@ -26,6 +40,8 @@ def create_pool(dsn: str) -> ConnectionPool:
     Returns:
         An open ``ConnectionPool`` with min 2 / max 10 connections.
     """
+
+    ensure_vector_extension(dsn)
 
     def _configure_connection(conn):  # noqa: ANN001
         """Register pgvector type handlers on each new connection."""
